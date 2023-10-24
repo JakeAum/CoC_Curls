@@ -2,6 +2,7 @@
 # 10-22-23
 # This script shows how to use the ultralytics YOLOv5 model to detect poses from live web cam video feed
 
+import math
 import cv2
 from ultralytics import YOLO
 import numpy as np

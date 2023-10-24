@@ -52,3 +52,21 @@ plt.ylabel('Weight')
 # Show the plot
 plt.show()
 
+#user input
+weight = int(input("What weight were you using: "))
+reps = int(input("How many reps did you perform: "))
+# curl_type = input("Were you using a barbell or dumbell: ")
+goal = int(input("What is your goal weight with this exercise:  "))
+rpe_question = input("Do you know what RPE stands for y/n: ")
+if rpe_question == "n":
+    print("The RPE scale typically ranges from 0 to 10, with 0 being no effort at all n\ (completely easy) and 10 being maximum effort (extremely hard).")
+elif rpe_question == "y":
+    rpe = int(input("What would you rate your REP 0-10: "))
+else:
+    print("Please answer with y for yes or n for no!")
+
+#|--------------------------------------------------|
+#|print(f"Since you were able to {weight}lbs")       |
+#|print(f"for {reps} on curls with RPE of {rpe}/10")|
+#|print(f"Your current max is {max}lbs, WAY TO GO!!!)|
+#|--------------------------------------------------|

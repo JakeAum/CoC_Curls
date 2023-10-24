@@ -1,9 +1,10 @@
-# Jacob Auman and Evan Tone
+# Jacob Auman, Evan Tone, Grant H
 # 10-24-23
 
 # First attempt at building the CoC curl detector.
 
 # Import statements
+import math
 import cv2
 from ultralytics import YOLO
 import numpy as np
@@ -41,7 +42,40 @@ keypoints_dict = {}
 # Functions
 # ----------------------------------- #
 
+def getAngle(whichSideArm, keypoints_dict):
+    # Side Check Statment
+    if whichSideArm == "left" or whichSideArm == "L":
+        wrist = np.array([keypoints_dict["left_wrist"]['x'], keypoints_dict["left_wrist"]['y']])
+        elbow = np.array([keypoints_dict["left_elbow"]['x'], keypoints_dict["left_elbow"]['y']])
+        shoulder = np.array([keypoints_dict["left_shoulder"]['x'], keypoints_dict["left_shoulder"]['y']])
+    elif whichSideArm == "right" or whichSideArm == "R":
+       wrist = np.array([keypoints_dict["right_wrist"]['x'], keypoints_dict["right_wrist"]['y']])
+       elbow = np.array([keypoints_dict["right_elbow"]['x'], keypoints_dict["right_elbow"]['y']])
+       shoulder = np.array([keypoints_dict["right_shoulder"]['x'], keypoints_dict["right_shoulder"]['y']])
+    else:
+        ValueError("Please enter a valid arm side (left or right)")
 
+    # Use the X, Y coordinates to calculate the angle at the elbow
+    # ----------------------------------- #
+    # Create vectors AB and BC
+    AB = wrist - elbow
+    BC = shoulder - elbow
+    # Compute the dot product and the magnitudes of AB and BC
+    dot_product = np.dot(AB, BC)
+    magnitude_AB = np.linalg.norm(AB)
+    magnitude_BC = np.linalg.norm(BC)   
+    # Calculate the cosine of the angle
+    cos_angle = dot_product / (magnitude_AB * magnitude_BC)
+    # Make sure the value of cosine is in the domain of arccos function
+    cos_angle = np.clip(cos_angle, -1.0, 1.0)
+    # Calculate the angle in radians and then convert it to degrees
+    angle = np.arccos(cos_angle)
+    angle_degrees = np.degrees(angle)
+    angle_output = int(angle_degrees)
+    
+    # Start and End angle are used to draw the arc 
+
+    return angle_output, #startAngle, endAngle
 
 
 
@@ -74,24 +108,24 @@ while cap.isOpened():
                     if name in ["right_shoulder, right_elbow, right_wrist"]: print(True)
                     x, y, probability = keypoint
                     keypoints_dict[name] = {"x": x.item(), "y": y.item(), "probability": probability.item()}
-
-            # Call func for angle of the arm
-            
-
+        
             # Plot a circle at the elbow
             # -------------------------------- #
-        
             # LEFT ARM
             # elbow_x = keypoints["left_elbow"]["x"]
             # elbow_y = keypoints["left_elbow"]["y"]
-
             # RIGHT ARM
             elbow_x = keypoints_dict["right_elbow"]["x"]
             elbow_y = keypoints_dict["right_elbow"]["y"]
 
             #cv2.circle(frame,(int(elbow_x), int(elbow_y)), 30, (0, 0, 255), 2)
-            #cv2.ellipse(frame, (int(elbow_x), int(elbow_y)), (25, 25), 0, startAngle, endAngle, color[, thickness[, lineType[, shift]]])
+    
+            #cv2.ellipse(frame, (int(elbow_x), int(elbow_y)), (25, 25), 0, startAngle, endAngle, (0, 0, 255), -1)
             
+            #overlay the angle of the arm at the elbow
+            arm_angle = getAngle("right", keypoints_dict)
+            cv2.putText(frame, str(arm_angle), (int(elbow_x), int(elbow_y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
+
 
             # Plot Pose Skeleton on frame
             # -------------------------------- #

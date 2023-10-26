@@ -35,31 +35,37 @@ keypoint_names = [
 
 # Initialize Variable
 # ----------------------------------- #
+whichSideArm = 'right'
+angleThreshold = 90
+
 frame_counter = 0
 keypoints_dict = {}
-
 
 # Functions
 # ----------------------------------- #
 
-def getAngle(whichSideArm, keypoints_dict):
-    # Side Check Statment
-    if whichSideArm == "left" or whichSideArm == "L":
-        wrist = np.array([keypoints_dict["left_wrist"]['x'], keypoints_dict["left_wrist"]['y']])
-        elbow = np.array([keypoints_dict["left_elbow"]['x'], keypoints_dict["left_elbow"]['y']])
-        shoulder = np.array([keypoints_dict["left_shoulder"]['x'], keypoints_dict["left_shoulder"]['y']])
-    elif whichSideArm == "right" or whichSideArm == "R":
-       wrist = np.array([keypoints_dict["right_wrist"]['x'], keypoints_dict["right_wrist"]['y']])
-       elbow = np.array([keypoints_dict["right_elbow"]['x'], keypoints_dict["right_elbow"]['y']])
-       shoulder = np.array([keypoints_dict["right_shoulder"]['x'], keypoints_dict["right_shoulder"]['y']])
+def getJointCoords(whichSideArm, keypoints_dict):
+    # This Function checks which side arm to look for and passes the set of joint coordiantes
+    ############################################################
+    if whichSideArm == "left" or whichSideArm == "right":
+        wrist = np.array([keypoints_dict[f"{whichSideArm}_wrist"]['x'], keypoints_dict[f"{whichSideArm}_wrist"]['y']])
+        elbow = np.array([keypoints_dict[f"{whichSideArm}_elbow"]['x'], keypoints_dict[f"{whichSideArm}_elbow"]['y']])
+        shoulder = np.array([keypoints_dict[f"{whichSideArm}_shoulder"]['x'], keypoints_dict[f"{whichSideArm}_shoulder"]['y']])
+        return wrist, elbow, shoulder
     else:
-        ValueError("Please enter a valid arm side (left or right)")
+        raise ValueError("Invalid arm side! (left or right,R)")
+
+def getAngle(whichSideArm, keypoints_dict):
+    # This Function is used to calculate the angle at the elbow
+    ############################################################
+    # Get the correct side, joint coordinates
+    wrist, elbow, shoulder = getJointCoords(whichSideArm, keypoints_dict)
 
     # Use the X, Y coordinates to calculate the angle at the elbow
     # ----------------------------------- #
     # Create vectors AB and BC
-    AB = wrist - elbow
-    BC = shoulder - elbow
+    AB = np.array([wrist[0]-elbow[0], wrist[1]-elbow[1]])
+    BC = np.array([shoulder[0] - elbow[0], shoulder[1] - elbow[1]])
     # Compute the dot product and the magnitudes of AB and BC
     dot_product = np.dot(AB, BC)
     magnitude_AB = np.linalg.norm(AB)
@@ -72,11 +78,26 @@ def getAngle(whichSideArm, keypoints_dict):
     angle = np.arccos(cos_angle)
     angle_degrees = np.degrees(angle)
     angle_output = int(angle_degrees)
-    
-    # Start and End angle are used to draw the arc 
 
-    return angle_output, #startAngle, endAngle
+    return angle_output
 
+def getAngleRelative(whichSideArm, keypoints_dict):
+    # This Function is only really needed for graphing the Joint angle with OpenCV
+    # Converts the single angle into two relative angle measured form +X axis counter clockwise
+    ############################################################
+    wrist, elbow, shoulder = getJointCoords(whichSideArm, keypoints_dict)
+
+    # Create vectors AB and BC
+    AB = np.array([wrist[0]-elbow[0], wrist[1]-elbow[1]])
+    BC = np.array([shoulder[0] - elbow[0], shoulder[1] - elbow[1]])
+
+    # Calculate the angle between AB and the positive x-axis
+    angle_AB = np.arctan2(AB[1], AB[0]) * 180 / np.pi
+
+    # Calculate the angle between BC and the positive x-axis
+    angle_BC = np.arctan2(BC[1], BC[0]) * 180 / np.pi
+
+    return angle_AB, angle_BC
 
 
 
@@ -104,27 +125,30 @@ while cap.isOpened():
             for person in pose_results:
                 keypoints = person.keypoints.data[0]
                 for keypoint, name in zip(keypoints, keypoint_names):
-                    
-                    if name in ["right_shoulder, right_elbow, right_wrist"]: print(True)
                     x, y, probability = keypoint
                     keypoints_dict[name] = {"x": x.item(), "y": y.item(), "probability": probability.item()}
         
-            # Plot a circle at the elbow
+            # Plot Over the Displayed Frame
             # -------------------------------- #
-            # LEFT ARM
-            # elbow_x = keypoints["left_elbow"]["x"]
-            # elbow_y = keypoints["left_elbow"]["y"]
-            # RIGHT ARM
-            elbow_x = keypoints_dict["right_elbow"]["x"]
-            elbow_y = keypoints_dict["right_elbow"]["y"]
+            if whichSideArm == "left" or whichSideArm == "right":
+                elbow_x = int(keypoints_dict[f"{whichSideArm}_elbow"]["x"])
+                elbow_y = int(keypoints_dict[f"{whichSideArm}_elbow"]["y"])
+                
 
-            #cv2.circle(frame,(int(elbow_x), int(elbow_y)), 30, (0, 0, 255), 2)
-    
-            #cv2.ellipse(frame, (int(elbow_x), int(elbow_y)), (25, 25), 0, startAngle, endAngle, (0, 0, 255), -1)
+            # plot the visual elbow arc
+            arm_angle = getAngle(whichSideArm, keypoints_dict)
+            if arm_angle < angleThreshold:
+                color = (0, 255, 0)
+            elif arm_angle > angleThreshold:
+                color = (0, 0, 255)
+            
+            startAngle, endAngle = getAngleRelative(whichSideArm, keypoints_dict)
+            cv2.ellipse(frame,((elbow_x), (elbow_y)), (35, 35), 0, startAngle, endAngle, color, -1)
             
             #overlay the angle of the arm at the elbow
-            arm_angle = getAngle("right", keypoints_dict)
-            cv2.putText(frame, str(arm_angle), (int(elbow_x), int(elbow_y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
+            #cv2.putText(frame, str(arm_angle), (int(elbow_x), int(elbow_y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
+            
+            
 
 
             # Plot Pose Skeleton on frame

@@ -7,7 +7,7 @@ def record_video():
 
     goal_time = 15
 
-    fourcc = cv.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv.VideoWriter_fourcc(*'DVIX')
     out = cv.VideoWriter('Test_Videos\output.mp4', fourcc, 20.0, (640, 480))
 
     if not cap.isOpened():

@@ -38,6 +38,7 @@ keypoint_names = [
 whichSideArm = 'right'
 angleThreshold = 90
 weightUsed = 35 #Lbs 16 kg in video
+input_file = 'Test_Videos\\output.mp4'
 
 frame_counter = 0
 fps = 10
@@ -115,7 +116,7 @@ def maxCurl_brzycki(weight, reps):
 # ----------------------------------- #
 #cap = cv2.VideoCapture(0) # Webcam front
 #cap = cv2.VideoCapture(1) # Webcam back
-cap = cv2.VideoCapture('Test_Videos\\output.mp4') # Video File
+cap = cv2.VideoCapture(input_file) # Video File
 
 # Main Video Loop
 # ----------------------------------- #

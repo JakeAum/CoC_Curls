@@ -38,10 +38,10 @@ keypoint_names = [
 whichSideArm = 'right'
 angleThreshold = 90
 weightUsed = 35 #Lbs 16 kg in video
-input_file = 'Test_Videos\\output.mp4'
+input_file = 'Test_Videos\\16kg-bicep-curl-until-failure-720-ytshorts.savetube.me.mp4'
 
 frame_counter = 0
-fps = 10
+fps = 2
 rep_counter = 0
 keypoints_dict = {}
 swingState = "down"

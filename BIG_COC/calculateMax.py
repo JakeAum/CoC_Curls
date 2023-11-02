@@ -6,6 +6,7 @@
 # Import Statements
 import json
 
+
 def readData():
     # Read the data.json file for the weight and reps
     with open('CoC_Curls\\BIG_COC\\data.json', 'r') as f:

@@ -37,7 +37,8 @@ keypoint_names = ["nose","left_eye","right_eye","left_ear","right_ear","left_sho
 def start_webcam(label):
     global webcam_running, cap
     if not webcam_running:
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0) # Front Camera
+        #cap = cv2.VideoCapture('CoC_Curls\\Test_Videos\\IMG_8007.MOV') #Test video
         if not cap.isOpened():
             raise IOError("Cannot open webcam")
         webcam_running = True
@@ -181,14 +182,14 @@ def imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle): #Complet
     cv2.circle(frame, (elbow_x, elbow_y), 5, (0,255, 0 ), -3)
     cv2.circle(frame, (wrist_x, wrist_y), 5, (0,255, 0 ), -3)
     cv2.circle(frame, (shoulder_x, shoulder_y), 5, (0,255, 0), -3)
-    # Color for the angle
-    if angle < 90:
-        color = (0, 255, 0)
-    elif angle > 90:
-        color = (0, 0, 255)
-    # Draw the angle of the crook of the arm
-    cv2.ellipse(frame,((elbow_x), (elbow_y)), (35, 35), 0, angleA, angleB, color, -1)
-    #overlay the angle of the arm at the elbow
+    # # Color for the angle
+    # if angle < 90:
+    #     color = (0, 255, 0)
+    # elif angle > 90:
+    #     color = (0, 0, 255)
+    # # Draw the angle of the crook of the arm
+    # cv2.ellipse(frame,((elbow_x), (elbow_y)), (35, 35), 0, angleA, angleB, color, -1)
+    # #overlay the angle of the arm at the elbow
     cv2.putText(frame, str(rep_counter), (int(elbow_x), int(elbow_y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv2.LINE_AA)
     return frame
     
@@ -214,7 +215,9 @@ def maxCurl_brzycki(): #Complete
     weight = data['weight']
     reps = data2['reps']
     # Calculate Max Curl using Brzycki Formula
-    maxCurl = int(weight * (36 / (37 - reps)))
+    #maxCurl = int(weight * (36 / (37 - reps)))
+    # Calculate Max Curl using Epley Formula
+    maxCurl= int(weight * (1 + 0.0333 * reps))
     return maxCurl
 
 def displayMaxCurl(maxCurl): #Complete

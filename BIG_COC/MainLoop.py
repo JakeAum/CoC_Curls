@@ -14,7 +14,6 @@ import numpy as np
 
 # Initialize Variables
 #############################################
-maxWeight = 0
 testIMG = 'CoC_Curls\\Test_Videos\\test.png'
 webcam_running = False
 cap = None  # Global variable to hold the capture object
@@ -164,13 +163,14 @@ def imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle): #Complet
     wrist_x, wrist_y = int(wrist_x), int(wrist_y)
     shoulder_x, shoulder_y = int(shoulder_x), int(shoulder_y)
 
-    # Draw dots at each point
-    cv2.circle(frame, (elbow_x, elbow_y), 5, (0, 0, 255), -3)
-    cv2.circle(frame, (wrist_x, wrist_y), 5, (0, 0, 255), -3)
-    cv2.circle(frame, (shoulder_x, shoulder_y), 5, (0, 0, 255), -3)
+    
     # Draw the lines between the points
     cv2.line(frame, (elbow_x, elbow_y), (wrist_x, wrist_y), (0, 0, 0), 3)
     cv2.line(frame, (shoulder_x,shoulder_y), (elbow_x, elbow_y), (0, 0, 0), 3)
+    # Draw dots at each point
+    cv2.circle(frame, (elbow_x, elbow_y), 5, (0,255, 0 ), -3)
+    cv2.circle(frame, (wrist_x, wrist_y), 5, (0,255, 0 ), -3)
+    cv2.circle(frame, (shoulder_x, shoulder_y), 5, (0,255, 0), -3)
     # Color for the angle
     if angle < 90:
         color = (0, 255, 0)
@@ -179,7 +179,7 @@ def imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle): #Complet
     # Draw the angle of the crook of the arm
     cv2.ellipse(frame,((elbow_x), (elbow_y)), (35, 35), 0, angleA, angleB, color, -1)
     #overlay the angle of the arm at the elbow
-    cv2.putText(frame, str(rep_counter), (int(elbow_x), int(elbow_y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2, cv2.LINE_AA)
+    cv2.putText(frame, str(rep_counter), (int(elbow_x), int(elbow_y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv2.LINE_AA)
     return frame
     
 
@@ -193,6 +193,21 @@ def writeRepCount(rep_counter):  #Complete
     with open('CoC_Curls\BIG_COC\data.json', 'w') as f:
         json.dump({"reps":rep_counter}, f)
 
+def maxCurl_brzycki(): #Complete
+    # Read the data.json file for the weight and reps
+    with open('CoC_Curls\BIG_COC\data.json', 'r') as f:
+        data = json.load(f)
+    # Access specific values using their keys
+    weight = data['weight']
+    reps = data['reps']
+    # Calculate Max Curl using Brzycki Formula
+    maxCurl = int(weight * (36 / (37 - reps)))
+    return maxCurl
+
+def displayMaxCurl(maxCurl): #Complete
+    text = f"You can curl a max of {maxCurl} lbs"
+    resultLabel.configure(text=text)
+
 # Loop Start and Kill Functions
 #############################################
 # Function to stop the webcam capture
@@ -202,6 +217,8 @@ def stop_webcam():
         webcam_running = False
         cap.release()
         print("Camera Stopped")
+    maxCurl = maxCurl_brzycki()
+    displayMaxCurl(maxCurl)
 
 # Modify the start_webcam function to start the webcam stream
 def pressStart():
@@ -214,12 +231,12 @@ def buttonPress1():
     arm = switch_var.get()
     print(f"Values saved:{weight} {arm}")
 
-    # Read the data.json file for the weight and reps
-    with open('CoC_Curls\BIG_COC\data.json', 'r') as f:
-        data = json.load(f)
-    # Access specific values using their keys
-    data['weight'] = weight
-    data['arm'] = arm
+    # # Read the data.json file for the weight and reps
+    # with open('CoC_Curls\BIG_COC\data.json', 'r') as f:
+    #     data = json.load(f)
+    # # Access specific values using their keys
+    # data['weight'] = weight
+    # data['arm'] = arm
     # Write the values to a json file
     with open('CoC_Curls\BIG_COC\data.json', 'w') as f:
         json.dump({"weight":weight, "arm":arm}, f)
@@ -307,7 +324,7 @@ image.image = imageTest
 
 
 outputFrame = ctk.CTkFrame(master=root)
-resultLabel = ctk.CTkLabel(master=outputFrame, text=f"You can curl a max of {maxWeight} lbs", font=("Arial", 30 , "bold"))
+resultLabel = ctk.CTkLabel(master=outputFrame, text=None, font=("Arial", 30 , "bold"))
 # Create the Stop Recording button
 
 

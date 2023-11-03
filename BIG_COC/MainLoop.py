@@ -48,29 +48,43 @@ def start_webcam(label):
 #############################################
 # Image Processing Functions
 def update_image(label, cap, scale_factor=1.5):
-    global webcam_running, rep_counter
+    global webcam_running, rep_counter, swingState, arm
     if webcam_running:
         success, frame = cap.read()
         if success:
             # Get Arm Angle and Count Reps
             wrist, elbow, shoulder = getJointCoords(frame, pose_model, arm)
-            angle = getArmAngle(wrist, elbow, shoulder)
-            rep_counter = countReps(angle, swingState, rep_counter)
-            writeRepCount(rep_counter)
-            # Display
-            angleA, angleB = getAngleRelative(wrist, elbow, shoulder)
-            frame = imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle)
+            if wrist.any() and elbow.any() and shoulder.any():
+                angle = getArmAngle(wrist, elbow, shoulder)
+                rep_counter, swingState = countReps(angle, swingState, rep_counter)
+                writeRepCount(rep_counter)
+                # Display
+                angleA, angleB = getAngleRelative(wrist, elbow, shoulder)
+                frame = imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle)
 
-            # Convert the image to PIL format...For GUI Display
-            cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(cv_image)
-            # Scale up the image
-            new_size = (int(pil_image.size[0] * scale_factor), int(pil_image.size[1] * scale_factor))
-            pil_image = pil_image.resize(new_size)
-            imgtk = ImageTk.PhotoImage(image=pil_image)
-            label.configure(image=imgtk)
-            label.image = imgtk
-            label.after(10, lambda: update_image(label, cap))
+                # Convert the image to PIL format...For GUI Display
+                cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(cv_image)
+                # Scale up the image
+                new_size = (int(pil_image.size[0] * scale_factor), int(pil_image.size[1] * scale_factor))
+                pil_image = pil_image.resize(new_size)
+                imgtk = ImageTk.PhotoImage(image=pil_image)
+                label.configure(image=imgtk)
+                label.image = imgtk
+                label.after(10, lambda: update_image(label, cap))
+                return rep_counter, swingState
+            
+            else:   
+                # Convert the image to PIL format...For GUI Display
+                cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(cv_image)
+                # Scale up the image
+                new_size = (int(pil_image.size[0] * scale_factor), int(pil_image.size[1] * scale_factor))
+                pil_image = pil_image.resize(new_size)
+                imgtk = ImageTk.PhotoImage(image=pil_image)
+                label.configure(image=imgtk)
+                label.image = imgtk
+                label.after(10, lambda: update_image(label, cap))
         else:
             print("Failed to capture frame")
             webcam_running = False
@@ -121,7 +135,7 @@ def countReps(angle, swingState, rep_counter): #complete
     if angle < 90 and swingState == "down":
         rep_counter += 1
         swingState = "up"
-    return rep_counter
+    return rep_counter, swingState
 
 def getAngleRelative(wrist, elbow, shoulder): #Complete
     # This Function is only really needed for graphing the Joint angle with OpenCV
@@ -155,8 +169,8 @@ def imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle): #Complet
     cv2.circle(frame, (wrist_x, wrist_y), 5, (0, 0, 255), -3)
     cv2.circle(frame, (shoulder_x, shoulder_y), 5, (0, 0, 255), -3)
     # Draw the lines between the points
-    cv2.line(frame, (elbow_x, elbow_y), (wrist_x, wrist_y), (0, 0, 255), 3)
-    cv2.line(frame, (shoulder_x,shoulder_y), (elbow_x, elbow_y), (0, 0, 255), 3)
+    cv2.line(frame, (elbow_x, elbow_y), (wrist_x, wrist_y), (0, 0, 0), 3)
+    cv2.line(frame, (shoulder_x,shoulder_y), (elbow_x, elbow_y), (0, 0, 0), 3)
     # Color for the angle
     if angle < 90:
         color = (0, 255, 0)
@@ -164,7 +178,10 @@ def imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle): #Complet
         color = (0, 0, 255)
     # Draw the angle of the crook of the arm
     cv2.ellipse(frame,((elbow_x), (elbow_y)), (35, 35), 0, angleA, angleB, color, -1)
+    #overlay the angle of the arm at the elbow
+    cv2.putText(frame, str(rep_counter), (int(elbow_x), int(elbow_y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2, cv2.LINE_AA)
     return frame
+    
 
 def writeRepCount(rep_counter):  #Complete
     # Read the data.json file for the weight and reps

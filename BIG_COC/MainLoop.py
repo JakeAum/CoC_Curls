@@ -18,7 +18,6 @@ testIMG = 'CoC_Curls\\Test_Videos\\test.png'
 webcam_running = False
 cap = None  # Global variable to hold the capture object
 frame_counter = 0
-fps = 2
 rep_counter = 0
 keypoints_dict = {}
 swingState = "down" # Default state is down
@@ -47,43 +46,46 @@ def start_webcam(label):
 #############################################
 # Image Processing Functions
 def update_image(label, cap, scale_factor=1.5):
-    global webcam_running, rep_counter, swingState, arm
+    global webcam_running, rep_counter, swingState, arm, frame_counter
     if webcam_running:
         success, frame = cap.read()
         if success:
-            # Get Arm Angle and Count Reps
-            wrist, elbow, shoulder = getJointCoords(frame, pose_model, arm)
-            if wrist.any() and elbow.any() and shoulder.any():
-                angle = getArmAngle(wrist, elbow, shoulder)
-                rep_counter, swingState = countReps(angle, swingState, rep_counter)
-                writeRepCount(rep_counter)
-                # Display
-                angleA, angleB = getAngleRelative(wrist, elbow, shoulder)
-                frame = imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle)
+            if frame_counter < 5:  
+                frame_counter += 1 
+                # Convert the image to PIL format...For GUI Display
+                cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(cv_image)
+                # Scale up the image
+                new_size = (int(pil_image.size[0] * scale_factor), int(pil_image.size[1] * scale_factor))
+                pil_image = pil_image.resize(new_size)
+                imgtk = ImageTk.PhotoImage(image=pil_image)
+                label.configure(image=imgtk)
+                label.image = imgtk
+                label.after(10, lambda: update_image(label, cap))
+            else:        
+                # # Get Arm Angle and Count Reps
+                # jointCoords = getJointCoords(frame, pose_model, arm)
+                # if jointCoords is not None:
+                wrist, elbow, shoulder = getJointCoords(frame, pose_model, arm)
+                if wrist.any() and elbow.any() and shoulder.any():
+                    angle = getArmAngle(wrist, elbow, shoulder)
+                    rep_counter, swingState = countReps(angle, swingState, rep_counter)
+                    writeRepCount(rep_counter)
+                    # Display
+                    angleA, angleB = getAngleRelative(wrist, elbow, shoulder)
+                    frame = imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle)
 
-                # Convert the image to PIL format...For GUI Display
-                cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                pil_image = Image.fromarray(cv_image)
-                # Scale up the image
-                new_size = (int(pil_image.size[0] * scale_factor), int(pil_image.size[1] * scale_factor))
-                pil_image = pil_image.resize(new_size)
-                imgtk = ImageTk.PhotoImage(image=pil_image)
-                label.configure(image=imgtk)
-                label.image = imgtk
-                label.after(10, lambda: update_image(label, cap))
-                return rep_counter, swingState
-            
-            else:   
-                # Convert the image to PIL format...For GUI Display
-                cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                pil_image = Image.fromarray(cv_image)
-                # Scale up the image
-                new_size = (int(pil_image.size[0] * scale_factor), int(pil_image.size[1] * scale_factor))
-                pil_image = pil_image.resize(new_size)
-                imgtk = ImageTk.PhotoImage(image=pil_image)
-                label.configure(image=imgtk)
-                label.image = imgtk
-                label.after(10, lambda: update_image(label, cap))
+                    # Convert the image to PIL format...For GUI Display
+                    cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    pil_image = Image.fromarray(cv_image)
+                    # Scale up the image
+                    new_size = (int(pil_image.size[0] * scale_factor), int(pil_image.size[1] * scale_factor))
+                    pil_image = pil_image.resize(new_size)
+                    imgtk = ImageTk.PhotoImage(image=pil_image)
+                    label.configure(image=imgtk)
+                    label.image = imgtk
+                    label.after(10, lambda: update_image(label, cap))
+                    return rep_counter, swingState  
         else:
             print("Failed to capture frame")
             webcam_running = False
@@ -101,12 +103,20 @@ def getJointCoords(frame, pose_model, whichSideArm): #Complete
             keypoints_dict[name] = {"x": x.item(), "y": y.item(), "probability": probability.item()}
     
     if whichSideArm == "left" or whichSideArm == "right":
-        wrist = np.array([keypoints_dict[f"{whichSideArm}_wrist"]['x'], keypoints_dict[f"{whichSideArm}_wrist"]['y']])
-        elbow = np.array([keypoints_dict[f"{whichSideArm}_elbow"]['x'], keypoints_dict[f"{whichSideArm}_elbow"]['y']])
-        shoulder = np.array([keypoints_dict[f"{whichSideArm}_shoulder"]['x'], keypoints_dict[f"{whichSideArm}_shoulder"]['y']])
-        return wrist, elbow, shoulder
+        joint_keys = [f"{whichSideArm}_{joint}" for joint in ["wrist", "elbow", "shoulder"]]
+        if all(key in keypoints_dict for key in joint_keys):
+            wrist = np.array([keypoints_dict[joint_keys[0]]['x'], keypoints_dict[joint_keys[0]]['y']])
+            elbow = np.array([keypoints_dict[joint_keys[1]]['x'], keypoints_dict[joint_keys[1]]['y']])
+            shoulder = np.array([keypoints_dict[joint_keys[2]]['x'], keypoints_dict[joint_keys[2]]['y']])
+            return wrist, elbow, shoulder
+        else:
+            missing_keys = [key for key in joint_keys if key not in keypoints_dict]
+            print(f"Missing keys in keypoints_dict: {missing_keys}")
+            # handle the case when the keys are not found
     else:
-        raise ValueError("Invalid arm side! (left or right)")
+        #raise ValueError("Invalid arm side! (left or right)")
+        print("arm error")
+        return None, None, None
 
 def getArmAngle(wrist, elbow, shoulder): # Complete
     # Use the X, Y coordinates to calculate the angle at the elbow
@@ -185,21 +195,24 @@ def imageOverlay(frame, wrist, elbow, shoulder, angleA, angleB, angle): #Complet
 
 def writeRepCount(rep_counter):  #Complete
     # Read the data.json file for the weight and reps
-    with open('CoC_Curls\BIG_COC\data.json', 'r') as f:
+    with open('CoC_Curls\BIG_COC\data2.json', 'r') as f:
         data = json.load(f)
     # Access specific values using their keys
     data['reps'] = rep_counter
     # Write the values to a json file
-    with open('CoC_Curls\BIG_COC\data.json', 'w') as f:
+    with open('CoC_Curls\BIG_COC\data2.json', 'w') as f:
         json.dump({"reps":rep_counter}, f)
 
 def maxCurl_brzycki(): #Complete
     # Read the data.json file for the weight and reps
     with open('CoC_Curls\BIG_COC\data.json', 'r') as f:
         data = json.load(f)
+
+    with open('CoC_Curls\BIG_COC\data2.json', 'r') as f:
+        data2 = json.load(f)
     # Access specific values using their keys
     weight = data['weight']
-    reps = data['reps']
+    reps = data2['reps']
     # Calculate Max Curl using Brzycki Formula
     maxCurl = int(weight * (36 / (37 - reps)))
     return maxCurl
